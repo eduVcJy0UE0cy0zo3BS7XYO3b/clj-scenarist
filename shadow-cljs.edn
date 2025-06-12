@@ -1,0 +1,13 @@
+{:source-paths ["src" "test"]
+ :dependencies [[reagent "1.2.0"]
+                [datascript "1.6.1"]]
+ :builds
+ {:app {:target :browser
+        :output-dir "resources/public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn scenarist.core/init}}
+        :devtools {:http-root "resources/public"
+                   :http-port 8080}}
+  :test {:target :node-script
+         :output-to "out/test.js"
+         :main run-tests/-main}}}

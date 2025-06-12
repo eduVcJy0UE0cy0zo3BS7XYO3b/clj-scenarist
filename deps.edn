@@ -1,0 +1,5 @@
+{:deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
+        reagent/reagent {:mvn/version "1.2.0"}
+        datascript/datascript {:mvn/version "1.6.1"}
+        thheller/shadow-cljs {:mvn/version "2.25.10"}}
+ :paths ["src" "resources"]}

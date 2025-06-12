@@ -1,0 +1,20 @@
+# Shadow-cljs
+.shadow-cljs/
+node_modules/
+resources/public/js/
+out/
+
+# Clojure
+.cpcache/
+.nrepl-port
+
+# MacOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log

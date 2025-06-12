@@ -1,0 +1,19 @@
+{
+  "name": "scm-scenarist",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "shadow-cljs watch app",
+    "build": "shadow-cljs release app",
+    "test": "shadow-cljs compile test && node out/test.js",
+    "test:watch": "shadow-cljs watch test",
+    "test:compile": "shadow-cljs compile test"
+  },
+  "devDependencies": {
+    "shadow-cljs": "2.25.10"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

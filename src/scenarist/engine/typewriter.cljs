@@ -101,5 +101,4 @@
   (let [db @db/conn
         lines (db/scene-lines db scene-id)]
     (when (seq lines)
-      (db/update-displayed-text! "")
       (start-typing! (:line/text (first lines))))))

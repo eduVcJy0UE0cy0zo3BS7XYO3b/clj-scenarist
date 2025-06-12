@@ -116,17 +116,14 @@
     (let [conn (create-test-scenario)]
       (with-redefs [db/conn conn]
         (let [scene-id (:db/id (db/current-scene @conn))]
+          ;; Устанавливаем мгновенную скорость перед запуском
+          (db/set-text-speed! :instant)
           (typewriter/start-scene! scene-id)
           
           (let [db @conn
                 state (db/game-state db)]
             ;; При мгновенной скорости текст должен появиться сразу
-            (db/set-text-speed! :instant)
-            (typewriter/start-scene! scene-id)
-            
-            (let [db @conn
-                  state (db/game-state db)]
-              (is (= (:game/displayed-text state) "Первая строка для тестирования typewriter")))))))))
+            (is (= (:game/displayed-text state) "Первая строка для тестирования typewriter"))))))))
 
 (deftest test-clear-typing
   (testing "Очистка таймаута печати"

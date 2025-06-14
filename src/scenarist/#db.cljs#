@@ -1,6 +1,6 @@
 (ns scenarist.db
   (:require [datascript.core :as d]
-            [reagent.core :as r]))
+            [posh.reagent :as p]))
 
 (def schema
   {;; Сцена - основная единица повествования
@@ -15,7 +15,7 @@
    :line/id {:db/unique :db.unique/identity}
    :line/text {:db/type :db.type/string}
    :line/speaker {:db/type :db.type/string}
-   :line/position {:db/type :db.type/long}
+   :line/position {:db/type :db.type/long}y
 
    ;; Состояние игры
    :game/id {:db/unique :db.unique/identity}
@@ -27,17 +27,12 @@
 
 (defonce conn (d/create-conn schema))
 
-;; Реактивный атом для отслеживания изменений БД
-(defonce db-state (r/atom @conn))
-
-;; Слушатель изменений БД
-(d/listen! conn :db-state
-  (fn [tx-report]
-    (reset! db-state (:db-after tx-report))))
+;; Инициализация posh для реактивности
+(p/posh! conn)
 
 ;; Инициализация начального состояния
 (defn init-game-state! []
-  (d/transact! conn
+  (p/transact! conn
     [{:game/id :main-game
       :game/current-line 0
       :game/text-speed :medium
@@ -52,13 +47,15 @@
 
 ;; Реактивная версия получения текущей сцены
 (defn current-scene-rx []
-  (current-scene @db-state))
+  (p/q '[:find ?scene .
+         :where [_ :game/current-scene ?scene]]
+       conn))
 
 ;; Реактивный pull текущей сцены с полными данными
 (defn current-scene-data-rx []
-  (let [scene-id (current-scene-rx)]
+  (let [scene-id @(current-scene-rx)]
     (when scene-id
-      (d/pull @db-state
+      (p/pull conn 
               [:scene/id :scene/name :scene/background :scene/music :scene/lines]
               scene-id))))
 
@@ -72,7 +69,11 @@
 
 ;; Реактивная версия получения строк сцены
 (defn scene-lines-rx [scene-id]
-  (scene-lines @db-state scene-id))
+  (p/q '[:find [(pull ?line [:line/text :line/speaker :line/position]) ...]
+         :in $ ?scene
+         :where
+         [?scene :scene/lines ?line]]
+       conn scene-id))
 
 ;; Получить текущее состояние игры
 (defn game-state [db]
@@ -85,9 +86,9 @@
 
 ;; Реактивная версия состояния игры
 (defn game-state-rx []
-  (d/pull @db-state
+  (p/pull conn 
           [:game/current-line
-           :game/text-speed
+           :game/text-speed  
            :game/displayed-text
            :game/is-typing
            {:game/current-scene [:scene/id]}]
@@ -95,16 +96,16 @@
 
 ;; Реактивная версия получения текущей строки
 (defn current-line-rx []
-  (let [state (game-state-rx)
+  (let [state @(game-state-rx)
         scene-id (get-in state [:game/current-scene :scene/id])
         current-line-idx (:game/current-line state)]
     (when scene-id
-      (let [lines (scene-lines-rx [:scene/id scene-id])]
+      (let [lines @(scene-lines-rx [:scene/id scene-id])]
         (nth lines current-line-idx nil)))))
 
 ;; Обновить текущую сцену
 (defn set-current-scene! [scene-id]
-  (d/transact! conn
+  (p/transact! conn
     [{:db/id [:game/id :main-game]
       :game/current-scene [:scene/id scene-id]
       :game/current-line 0
@@ -113,21 +114,21 @@
 
 ;; Обновить отображаемый текст
 (defn update-displayed-text! [text]
-  (d/transact! conn
+  (p/transact! conn
     [{:db/id [:game/id :main-game]
       :game/displayed-text text}]))
 
 ;; Установить состояние печати
 (defn set-typing-state! [is-typing]
-  (d/transact! conn
+  (p/transact! conn
     [{:db/id [:game/id :main-game]
       :game/is-typing is-typing}]))
 
 ;; Перейти к следующей строке
 (defn advance-line! []
-  (let [db @conn
+  (let [db (d/db conn)
         current-line (-> db game-state :game/current-line)]
-    (d/transact! conn
+    (p/transact! conn
       [{:db/id [:game/id :main-game]
         :game/current-line (inc current-line)
         :game/displayed-text ""
@@ -135,6 +136,6 @@
 
 ;; Изменить скорость текста
 (defn set-text-speed! [speed]
-  (d/transact! conn
+  (p/transact! conn
     [{:db/id [:game/id :main-game]
       :game/text-speed speed}]))

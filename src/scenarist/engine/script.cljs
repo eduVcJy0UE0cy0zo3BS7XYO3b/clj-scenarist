@@ -1,5 +1,6 @@
 (ns scenarist.engine.script
   (:require [datascript.core :as d]
+            [posh.reagent :as p]
             [scenarist.db :as db]
             [scenarist.engine.typewriter :as typewriter]))
 
@@ -24,7 +25,7 @@
         line-ids (map :db/id line-entities)]
     
     ;; Добавляем строки в БД
-    (d/transact! db/conn line-entities)
+    (p/transact! db/conn line-entities)
     
     ;; Создаем сцену
     (let [scene-entity (cond-> {:db/id (str "scene-" id-str)
@@ -33,7 +34,7 @@
                                  :scene/lines (map #(vector :line/id (keyword %)) line-ids)}
                          background (assoc :scene/background background)
                          music (assoc :scene/music music))]
-      (d/transact! db/conn [scene-entity]))))
+      (p/transact! db/conn [scene-entity]))))
 
 (defmethod execute-command :jump
   [{:keys [target]}]
@@ -41,7 +42,7 @@
   (db/set-current-scene! target)
   
   ;; Запускаем первую строку новой сцены
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         scene-id (db/current-scene db)]
     (when scene-id
       (typewriter/start-scene! scene-id))))
@@ -54,10 +55,10 @@
 (defmethod execute-command :set-background
   [{:keys [image]}]
   ;; Смена фона текущей сцены
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         scene-id (db/current-scene db)]
     (when scene-id
-      (d/transact! db/conn
+      (p/transact! db/conn
         [{:db/id scene-id
           :scene/background image}]))))
 
@@ -83,7 +84,7 @@
 (defn get-scene-count
   "Возвращает количество сцен в игре"
   []
-  (let [db @db/conn]
+  (let [db (d/db db/conn)]
     (count (d/q '[:find ?scene
                   :where [?scene :scene/id]]
                 db))))
@@ -91,7 +92,7 @@
 (defn get-all-scenes
   "Возвращает список всех сцен"
   []
-  (let [db @db/conn]
+  (let [db (d/db db/conn)]
     (d/q '[:find [(pull ?scene [:scene/id :scene/name]) ...]
            :where [?scene :scene/id]]
          db)))
@@ -99,7 +100,7 @@
 (defn scene-exists?
   "Проверяет существование сцены"
   [scene-id]
-  (let [db @db/conn]
+  (let [db (d/db db/conn)]
     (some? (d/q '[:find ?scene .
                   :in $ ?id
                   :where [?scene :scene/id ?id]]
@@ -108,7 +109,7 @@
 (defn advance-scene!
   "Переход к следующей сцене в порядке добавления"
   []
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         current-scene-id (db/current-scene db)
         all-scenes (sort-by :scene/id (get-all-scenes))
         current-idx (.indexOf (map :scene/id all-scenes) 

@@ -1,13 +1,30 @@
-{:source-paths ["src" "test"]
- :dependencies [[reagent "1.2.0"]
-                [datascript "1.6.1"]]
+{:nrepl        {:port 9000}
+ :deps true
+
  :builds
  {:app {:target :browser
-        :output-dir "resources/public/js"
-        :asset-path "/js"
+        :output-dir "out/public/js"
         :modules {:main {:init-fn scenarist.core/init}}
-        :devtools {:http-root "resources/public"
-                   :http-port 8080}}
+        :devtools {:enabled true
+                   :http-root "out/public"
+                   :http-port 8081}}
+
+  :devcards {:target     :browser
+             :output-dir "out/devcards/js"
+             :asset-dir  "out/devcards/assets"
+             :entries    [scenarist.devcards.core]
+             :devtools   {:enabled   true
+                          :http-root "out/devcards"
+                          :http-port 3006
+
+                          :repl-pprint true}
+             :runner-ns  scenarist.devcards.core ; must have init fn to run
+             :modules    {:main {:init-fn scenarist.devcards.core/init}}
+             :js-options {:resolve {"highlight.js"                {:target :npm :require "highlight.js/lib/core"}
+                                    "devcards-marked"             {:target :npm :require "marked"}
+                                    "devcards-syntax-highlighter" {:target :npm :require "highlight.js/lib/core"}}}
+             :compiler-options {:devcards true}}
+
   :test {:target :node-script
          :output-to "out/test.js"
          :main run-tests/-main}}}

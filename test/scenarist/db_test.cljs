@@ -59,7 +59,7 @@
             scene-id (db/current-scene db)
             scene (d/entity db scene-id)
             lines (db/scene-lines db scene-id)]
-        
+
         (is (= (:scene/name scene) "Тестовая сцена"))
         (is (= (:scene/background scene) "/images/test-bg.jpg"))
         (is (= (count lines) 2))
@@ -73,7 +73,7 @@
             db @db/conn
             state (db/game-state db)]
         (is (= (:game/displayed-text state) "Новый текст")))))
-  
+
   (testing "Установка состояния печати"
     (with-redefs [db/conn (create-test-db)]
       (let [_ (db/set-typing-state! true)
@@ -114,7 +114,7 @@
             db2 @db/conn
             scene2-id (db/current-scene db2)
             state (db/game-state db2)]
-        
+
         (is (not= scene1-id scene2-id))
         (is (= (:game/current-line state) 0))
         (is (= (:game/displayed-text state) ""))))))
@@ -123,26 +123,26 @@
   (testing "Сложный сценарий с несколькими операциями"
     (with-redefs [db/conn (create-test-db)]
       (let [_ (add-test-scene db/conn :intro)]
-        
+
         ;; Устанавливаем сцену
         (db/set-current-scene! :intro)
-        
+
         ;; Начинаем печатать первую строку
         (db/set-typing-state! true)
         (db/update-displayed-text! "Первая")
-        
+
         (let [db @db/conn
               state (db/game-state db)]
           (is (= (:game/displayed-text state) "Первая"))
           (is (= (:game/is-typing state) true)))
-        
+
         ;; Завершаем печать
         (db/update-displayed-text! "Первая строка диалога")
         (db/set-typing-state! false)
-        
+
         ;; Переходим к следующей строке
         (db/advance-line!)
-        
+
         (let [db @db/conn
               state (db/game-state db)]
           (is (= (:game/current-line state) 1))

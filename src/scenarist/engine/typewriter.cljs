@@ -1,5 +1,6 @@
 (ns scenarist.engine.typewriter
   (:require [datascript.core :as d]
+            [posh.reagent :as p]
             [scenarist.db :as db]))
 
 (def speed-map
@@ -20,13 +21,13 @@
   "Начинает посимвольный вывод текста"
   [text]
   (clear-typing!)
-  (let [speed (-> @db/conn
+  (let [speed (-> (d/db db/conn)
                   db/game-state
                   :game/text-speed
                   speed-map)]
     (db/update-displayed-text! "")
     (db/set-typing-state! true)
-    
+
     (if (= speed 0)
       ;; Мгновенное отображение
       (do
@@ -48,7 +49,7 @@
 (defn skip-typing!
   "Пропускает анимацию печати и показывает весь текст"
   []
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         game-state (db/game-state db)
         scene-id (db/current-scene db)
         lines (when scene-id (db/scene-lines db scene-id))
@@ -68,7 +69,7 @@
 (defn advance-line!
   "Переход к следующей строке диалога"
   []
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         game-state (db/game-state db)
         scene-id (db/current-scene db)
         lines (when scene-id (db/scene-lines db scene-id))
@@ -87,7 +88,7 @@
 (defn handle-click!
   "Обработка клика по экрану"
   []
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         game-state (db/game-state db)]
     (if (:game/is-typing game-state)
       ;; Если текст печатается - пропускаем до конца
@@ -98,7 +99,7 @@
 (defn start-scene!
   "Запуск первой строки сцены"
   [scene-id]
-  (let [db @db/conn
+  (let [db (d/db db/conn)
         lines (db/scene-lines db scene-id)]
     (when (seq lines)
       (start-typing! (:line/text (first lines))))))

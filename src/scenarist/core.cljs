@@ -21,7 +21,7 @@
        :speaker "Главный герой"}
       {:text "Хотя... может, стоит прогулять первый урок?"
        :speaker "Главный герой"}]})
-  
+
   (script/add-scene!
     {:id :school-gate
      :name "У школьных ворот"
@@ -38,10 +38,10 @@
        :speaker "Одноклассница"}
       {:text "..."
        :speaker "Главный герой"}]})
-  
+
   ;; Устанавливаем callback для перехода между сценами
   (typewriter/set-end-of-scene-callback! script/advance-scene!)
-  
+
   ;; Переходим к первой сцене
   (script/jump-to-scene! :intro))
 

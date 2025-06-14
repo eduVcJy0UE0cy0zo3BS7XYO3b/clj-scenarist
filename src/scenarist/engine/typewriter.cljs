@@ -1,64 +1,54 @@
 (ns scenarist.engine.typewriter
   (:require [datascript.core :as d]
-            [posh.reagent :as p]
             [scenarist.db :as db]))
 
-(def speed-map
-  {:slow 100
-   :medium 50
-   :fast 20
-   :instant 0})
+(def chars-per-second
+  {:slow 10        ; 10 символов в секунду (медленнее)
+   :medium 20      ; 20 символов в секунду (медленнее)
+   :fast 40        ; 40 символов в секунду (медленнее)
+   :instant nil})  ; мгновенно
 
-(defonce typing-timeout (atom nil))
+(defn calculate-duration [text speed]
+  "Вычисляет длительность анимации в миллисекундах"
+  (let [cps (chars-per-second speed)]
+    (if cps
+      (* (count text) (/ 1000 cps))
+      0)))
 
-(defn clear-typing! []
-  "Остановить текущую анимацию печати"
-  (when @typing-timeout
-    (js/clearTimeout @typing-timeout)
-    (reset! typing-timeout nil)))
+(defonce animation-timeout (atom nil))
+
+(defn clear-animation! []
+  "Остановить текущую анимацию"
+  (when @animation-timeout
+    (js/clearTimeout @animation-timeout)
+    (reset! animation-timeout nil)))
 
 (defn start-typing!
-  "Начинает посимвольный вывод текста"
+  "Запускает анимацию появления текста"
   [text]
-  (clear-typing!)
+  (clear-animation!)
   (let [speed (-> (d/db db/conn)
                   db/game-state
-                  :game/text-speed
-                  speed-map)]
-    (db/update-displayed-text! "")
+                  :game/text-speed)
+        duration (calculate-duration text speed)]
+    ;; Устанавливаем полный текст и начинаем анимацию
+    (db/update-displayed-text! text)
     (db/set-typing-state! true)
 
-    (if (= speed 0)
+    (if (= duration 0)
       ;; Мгновенное отображение
-      (do
-        (db/update-displayed-text! text)
-        (db/set-typing-state! false))
-      ;; Посимвольное отображение
-      (letfn [(type-next-char [idx]
-                (when (< idx (count text))
-                  (let [current-text (subs text 0 (inc idx))]
-                    (db/update-displayed-text! current-text)
-                    (if (= idx (dec (count text)))
-                      ;; Последний символ
-                      (db/set-typing-state! false)
-                      ;; Продолжаем печатать
-                      (reset! typing-timeout
-                        (js/setTimeout #(type-next-char (inc idx)) speed))))))]
-        (type-next-char 0)))))
+      (db/set-typing-state! false)
+      ;; Запускаем таймер для окончания анимации
+      (reset! animation-timeout
+        (js/setTimeout
+          #(db/set-typing-state! false)
+          duration)))))
 
 (defn skip-typing!
-  "Пропускает анимацию печати и показывает весь текст"
+  "Пропускает анимацию и показывает весь текст"
   []
-  (let [db (d/db db/conn)
-        game-state (db/game-state db)
-        scene-id (db/current-scene db)
-        lines (when scene-id (db/scene-lines db scene-id))
-        current-line-idx (:game/current-line game-state)
-        current-line (nth lines current-line-idx nil)]
-    (when (and current-line (:game/is-typing game-state))
-      (clear-typing!)
-      (db/update-displayed-text! (:line/text current-line))
-      (db/set-typing-state! false))))
+  (clear-animation!)
+  (db/set-typing-state! false))
 
 (defonce end-of-scene-callback (atom nil))
 
@@ -91,7 +81,7 @@
   (let [db (d/db db/conn)
         game-state (db/game-state db)]
     (if (:game/is-typing game-state)
-      ;; Если текст печатается - пропускаем до конца
+      ;; Если текст анимируется - пропускаем анимацию
       (skip-typing!)
       ;; Иначе переходим к следующей строке
       (advance-line!))))

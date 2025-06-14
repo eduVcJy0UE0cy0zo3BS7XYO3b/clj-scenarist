@@ -46,10 +46,25 @@
         [:div.dialogue-text
          {:style {:color "#ffffff"
                   :font-size "16px"
-                  :line-height "1.6"}}
+                  :line-height "1.6"
+                  :position "relative"
+                  :overflow "hidden"}}
          (if (= idx current-line)
-           (:game/displayed-text game-state)
-           (:line/text line))])]))))
+           ;; Текущая строка с анимацией
+           (let [is-typing (:game/is-typing game-state)
+                 text (:game/displayed-text game-state)
+                 speed-ms (typewriter/calculate-duration text (:game/text-speed game-state))]
+             [:div
+              {:style (merge
+                       {:position "relative"
+                        :display "inline-block"}
+                       (when is-typing
+                         {:clip-path "inset(0 100% 0 0)"
+                          :animation (str "text-reveal " speed-ms "ms linear forwards")}))}
+              ;; Весь текст
+              [:span text]])
+           ;; Предыдущие строки - просто текст
+           (:line/text line))]])])))
 
 (defn background-layer
   "Слой с фоновым изображением"
@@ -152,15 +167,26 @@
 (defn nvl-game-screen
   "Основной экран игры"
   []
-  [:div.game-screen
-   {:style {:position "relative"
-            :width "100vw"
-            :height "100vh"
-            :overflow "hidden"
-            :background-color "#000"
-            :cursor "pointer"
-            :user-select "none"}
-    :on-click handle-click!}
-   [background-layer]
-   [nvl-text-box]
-   [control-panel]])
+  [:<>
+   ;; CSS стили для анимации
+   [:style
+    "@keyframes text-reveal {
+       from {
+         clip-path: inset(0 100% 0 0);
+       }
+       to {
+         clip-path: inset(0 0 0 0);
+       }
+     }"]
+   [:div.game-screen
+    {:style {:position "relative"
+             :width "100vw"
+             :height "100vh"
+             :overflow "hidden"
+             :background-color "#000"
+             :cursor "pointer"
+             :user-select "none"}
+     :on-click handle-click!}
+    [background-layer]
+    [nvl-text-box]
+    [control-panel]]])
